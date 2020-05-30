@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="RewardMapper">
+
+	<!-- Reward(보상) table  assosiation 필요하면 추가할 것.-->
+	<resultMap id="rewardSelectMap" type="reward">
+		<result property="rewardNo" 			column="reward_no" 			jdbcType="NUMERIC"/>
+		<result property="userId" 			column="user_id" 			jdbcType="VARCHAR"/>
+		
+		<result property="purchaseItem.purchaseNo" 			column="purchase_no" 			jdbcType="NUMERIC"/>
+		
+		<result property="challenge.challNo" 			column="chall_no" 			jdbcType="NUMERIC"/>
+		<result property="challenge.challReward" 			column="chall_reward" 			jdbcType="NUMERIC"/>
+		
+		<result property="variablePoint" 			column="variable_point" 			jdbcType="NUMERIC"/>
+		<result property="variableActivityPoint" 	column="variable_activity_point" 		jdbcType="NUMERIC" />
+		<result property="variableDate" 	column="variable_date" 		jdbcType="DATE" />
+		<result property="totalPoint" 	column="total_point" 		jdbcType="NUMERIC" />
+		<result property="totalActivityPoint" 	column="total_activity_point" 		jdbcType="NUMERIC" />
+	</resultMap>
+	
+	
+	<!-- SQL : SELECT LIST 얘도 Search 추가할 것.-->
+	 <select  id="getUserBothPointList"  parameterType="String"	resultMap="rewardSelectMap">
+	  	SELECT reward_no,
+				user_id,
+				purchase_no,
+				chall_no,
+				variable_point,
+				variable_activity_point,
+				variable_date
+		FROM reward 
+		WHERE user_id = #{value}
+		ORDER BY variable_date DESC
+	 </select>
+	 
+	 <!-- Reward -->
+	<!-- SQL : INSERT -->
+	<insert 	id="increasePoint"		parameterType="reward" >
+	 	INSERT INTO reward(reward_no, 
+							user_id, 
+							purchase_no, 
+							chall_no, 
+							variable_point, 
+							variable_activity_point, 
+							variable_date)
+					VALUES (seq_reward_reward_no.NEXTVAL,
+							#{userId},
+							#{purchaseItem.purchaseNo:NUMERIC},
+							(SELECT  chall_no FROM challenge WHERE chall_no = #{challenge.challNo:NUMERIC}),
+							(SELECT chall_reward FROM challenge WHERE chall_no = #{challenge.challNo:NUMERIC}),
+							(SELECT chall_reward FROM challenge WHERE chall_no = #{challenge.challNo:NUMERIC}),SYSDATE)
+	 </insert>
+	 
+	 
+	 
+	 
+	 <!-- SQL : SELECT ROW Count -->
+	 <!-- 이거 어디에 쓰는지 알아볼것 -->	 
+	 <select  id="getTotalCount"  parameterType="String"	 resultType="int">
+	  	SELECT COUNT(*)
+				  	FROM(	 SELECT reward_no,
+									user_id,
+									purchase_no,
+									chall_no,
+									variable_point,
+									variable_activity_point,
+									variable_date,
+									total_point,
+									total_activity_point
+									FROM reward WHERE user_id = #{value} ORDER BY variable_date DESC) countTable
+	 </select>
+ 	
+</mapper>

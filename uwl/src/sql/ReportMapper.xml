@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="ReportMapper">
+ 	
+ 	<resultMap type="report" id="reportSelectMap">
+ 		<result property="reportNo" column="REPORT_NO" jdbcType="NUMERIC"/>
+ 		<result property="refPostNo" column="REF_POST_NO" jdbcType="NUMERIC"/>
+ 		<result property="refCommentNo" column="REF_COMMENT_NO" jdbcType="NUMERIC"/>
+ 		<result property="reportWhat" column="REPORT_WHAT" jdbcType="VARCHAR"/>
+ 		<result property="userId" column="USER_ID" jdbcType="VARCHAR"/>
+ 		<result property="reportStatus" column="REPORT_STATUS" jdbcType="VARCHAR"/>
+ 		<result property="reportCategoryNo" column="REPORT_CATEGORY_NO" jdbcType="VARCHAR"/>
+ 		<result property="reportDate" column="REPORT_DATE" jdbcType="DATE"/>
+ 		<result property="proceedDate" column="PROCEED_DATE" jdbcType="DATE"/>
+ 		<result property="reportContent" column="REPORT_CONTENT" jdbcType="VARCHAR"/>
+ 		<result property="stopDate" column="STOP_DATE" jdbcType="DATE"/>
+ 	</resultMap>
+ 	
+ 	<select id="getReport" parameterType="int" resultMap="reportSelectMap">
+ 		SELECT 
+ 			report_no, ref_post_no, ref_comment_no, user_id, report_what, report_status, report_category_no, report_date, proceed_date, report_content, stop_date
+		FROM report
+		WHERE report_no = #{value}
+ 	</select>
+ 	
+ 	
+ 	<insert id="addPostReport" parameterType="report">
+ 		INSERT
+ 		INTO report(
+ 			report_no, ref_post_no, ref_comment_no, user_id, report_what, report_status, report_category_no, report_date, proceed_date, report_content, stop_date)
+ 		VALUES(seq_report_report_no.NEXTVAL, #{refPostNo}, null, #{userId}, #{reportWhat}, '1', #{reportCategoryNo}, SYSDATE, null, #{reportContent}, null)
+ 	</insert>
+ 	
+ 	<update id="updateReport" parameterType="report"> <!-- 신고 처리 -->
+ 		UPDATE report
+ 		SET
+ 			report_status = #{reportStatus},
+ 			proceed_date = SYSDATE,
+ 			stop_date = SYSDATE + #{plusStopDate}
+ 		WHERE report_no = #{reportNo}
+ 	</update>
+ 	
+ 	<select id="getReportList" parameterType="map" resultMap="reportSelectMap">
+ 		SELECT 
+ 			report_no, ref_post_no, ref_comment_no, user_id, report_what, report_status, report_category_no, report_date, proceed_date, report_content, stop_date
+ 		FROM ( SELECT inner_table.*, ROWNUM AS row_seq
+ 			FROM ( SELECT * FROM report
+ 						WHERE report_status = #{report.reportStatus}
+ 						<if test="report.reportWhat == '1' ">
+ 							AND report_what = '1'
+ 						</if>
+ 						<if test="report.reportWhat == '2' ">
+ 							AND report_what = '2'
+ 						</if>
+ 						ORDER BY report_no) inner_table
+ 			WHERE ROWNUM &lt;= #{search.endRowNum} )
+ 		WHERE row_seq BETWEEN #{search.startRowNum} AND #{search.endRowNum}
+ 	</select>
+ 	
+ 	 <select  id="getTotalCount"  parameterType="search"	 resultType="int">
+	  	SELECT COUNT(*)
+	  	FROM(	SELECT *
+						FROM report
+						<!-- <if test="searchCondition != null">
+							<where>
+								<if test="searchCondition == 1 and searchKeyword !='' ">
+						 			and prod_no = #{searchKeyword}
+								</if>
+								<if test="searchCondition == 2 and searchKeyword !='' ">
+						 			and prod_name = #{searchKeyword}
+								</if>
+								<if test="searchCondition == 3 and searchKeyword !='' ">
+						 			and price = #{searchKeyword}
+								</if>
+							</where>
+						</if> --> ) countTable						
+	 </select>
+ 	
+</mapper>

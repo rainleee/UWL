@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="MatchingMapper">
+ 	<resultMap type="matching" id="matchingSelectMap">
+ 		<result property="matchingNo" column="matching_no" jdbcType="NUMERIC"/>
+ 		<result property="firstUserId" column="first_user_id" jdbcType="VARCHAR"/>
+ 		<result property="secondUserId" column="second_user_id" jdbcType="VARCHAR"/>
+ 		<result property="sendDate" column="send_date" jdbcType="DATE"/>
+ 		<result property="matchingStatus" column="matching_status" jdbcType="VARCHAR"/>
+ 	</resultMap>
+ 	
+ 	<resultMap type="item" id="itemSelectMap">
+ 		<result property="itemNo" column="item_no" jdbcType="NUMERIC"/>
+ 		<result property="firstUserId" column="first_user_id" jdbcType="VARCHAR"/>
+ 		<result property="secondUserId" column="second_user_id" jdbcType="VARCHAR"/>
+ 		<result property="itemCategory" column="item_category" jdbcType="VARCHAR"/>
+ 		<result property="useResult" column="use_result" jdbcType="VARCHAR"/>
+ 		<result property="useDate" column="use_date" jdbcType="DATE"/>
+ 		<result property="itemDefault" column="item_default" jdbcType="VARCHAR"/>
+ 	</resultMap>
+ 	
+ 	<insert id="addMatching" parameterType="matching">
+ 		insert
+ 		into matching (matching_no, first_user_id, second_user_id, send_date, matching_status)
+ 		values(seq_matching_matching_no.nextval,
+ 		#{firstUserId:VARCHAR},
+ 		#{secondUserId:VARCHAR},
+ 		sysdate,
+ 		'1')
+ 	</insert>
+ 	
+ 	<select id="getMatching" parameterType="string" resultMap="matchingSelectMap">
+ 		select
+ 		matching_no, first_user_id, second_user_id, send_date, matching_status
+ 		from matching
+ 		where first_user_id = #{value}
+ 	</select>
+ 	
+ 	<select id="getMatchingList" parameterType="map" resultMap="matchingSelectMap">
+ 		select
+ 		*
+ 		from (
+ 			select
+ 			inner_table.*, rownum as row_seq
+ 			from (
+ 				select
+ 				matching.*, users.user_id
+ 				from matching, users
+ 				where users.user_id = matching.first_user_id
+ 				order by matching_no desc
+ 			) inner_table
+ 			where rownum &lt;= #{endRowNum}
+ 		) where row_seq between #{startRowNum} and #{endRowNum}
+ 	</select>
+ 	
+ 	<update id="updateMatchingStatus" parameterType="matching">
+ 		update
+ 		matching
+ 		<set>
+ 			matching_status = #{matchingStatus}
+ 		</set>
+ 		where matching_no = #{matchingNo}
+ 	</update>
+ 	
+ 	<select id="getTotalCount" parameterType="search" resultType="int">
+ 		select
+ 		count(*)
+ 		from (
+ 			select
+ 			*
+ 			from matching
+ 		)
+ 	</select>
+ 	
+ 	<sql id="matchingList">
+ 		select
+ 		*
+ 		from matching
+ 		where second_user_id = #{firstUserId}
+ 		order by matching_no desc
+ 	</sql>
+ 	
+ 	<select id="getTotalFlower" parameterType="map" resultType="int">
+ 		select
+ 		count(*)
+ 		from (
+ 			<include refid="matchingList"/>
+ 		)
+ 	</select>
+ 	
+ 	<select id="getItem" parameterType="string" resultMap="itemSelectMap">
+ 		select
+ 		item_no, first_user_id, second_user_id, item_category, use_result, use_date, item_default
+ 		from item
+ 		where item_no = #{value}
+ 	</select>
+ 	
+ 	<select id="getItemList" parameterType="map" resultMap="itemSelectMap">
+ 		select
+ 		*
+ 		from (
+ 			select
+ 			inner_table.*, rownum as row_seq
+ 			from (
+ 				select
+ 				item.*, users.user_id
+ 				from item, users
+ 				where users.user_id = item.first_user_id
+ 				and users.user_id = #{firstUserId}
+ 				order by item_no desc
+ 			) inner_table
+ 			where rownum &lt;= #{search.endRowNum}
+ 		) where row_seq between #{search.startRowNum} and #{search.endRowNum}
+ 	</select>
+ 	
+ 	<update id="updateSpear" parameterType="item">
+ 		update
+ 		item
+ 		<set>
+ 			second_user_id = #{secondUserId:VARCHAR},
+ 			use_result = #{useResult:VARCHAR},
+ 			use_date = sysdate
+ 		</set>
+ 		where item_no = #{itemNo}
+ 	</update>
+ 	
+ 	<update id="updateShield" parameterType="item">
+ 		update
+ 		item
+ 		<set>
+ 			second_user_id = #{secondUserId:VARCHAR},
+ 			use_date = sysdate
+ 		</set>
+ 		where item_no = #{itemNo}
+ 	</update>
+ 	
+ 	<sql id="itemList">
+ 		select
+ 		*
+ 		from item
+ 		where first_user_id = #{firstUserId}
+ 		order by item_no desc
+ 	</sql>
+ 	
+ 	<select id="getTotalItem" parameterType="map" resultType="int">
+ 		select
+ 		count(*)
+ 		from (
+ 			<include refid="itemList"/>
+ 		)
+ 	</select>
+</mapper>

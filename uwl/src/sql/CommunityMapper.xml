@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+		
+		
+<mapper namespace="CommunityMapper">
+	<resultMap type="commentt" id="commentSelectMap">
+		<result property="commentNo" column="COMMENT_NO" jdbcType="NUMERIC"/>
+		<result property="userId" column="USER_ID" jdbcType="VARCHAR"/>
+		<result property="postNo" column="POST_NO" jdbcType="NUMERIC"/>
+		<result property="commentContent" column="COMMENT_CONTENT" jdbcType="VARCHAR"/>
+		<result property="commentDate" column="COMMENT_DATE" jdbcType="DATE"/>
+		<result property="commentStatus" column="COMMENT_STATUS" jdbcType="VARCHAR"/>
+		<result property="likeCount" column="LIKE_COUNT" jdbcType="NUMERIC"/>
+	</resultMap>
+	
+	<resultMap type="likey" id="likeSelectMap">
+		<result property="likeNo" column="LIKE_NO" jdbcType="NUMERIC"/>
+		<result property="refCommentNo" column="REF_COMMENT_NO" jdbcType="NUMERIC"/>
+		<result property="refPostNo" column="REF_POST_NO" jdbcType="NUMERIC"/>
+		<result property="userId" column="USER_ID" jdbcType="VARCHAR"/>
+		<result property="likeWhat" column="LIKE_WHAT" jdbcType="VARCHAR"/>
+	</resultMap>
+	
+	<resultMap type="notification" id="notificationSelectMap">
+		<result property="notiNo" column="NOTI_NO" jdbcType="NUMERIC"/>
+		<result property="userId" column="USER_ID" jdbcType="VARCHAR"/>
+		<result property="notiDate" column="NOTI_DATE" jdbcType="DATE"/>
+		<result property="notiOrigin" column="NOTI_ORIGIN" jdbcType="VARCHAR"/>
+		<result property="notiCode" column="NOTI_CODE" jdbcType="VARCHAR"/>
+	</resultMap>
+	
+	
+	<!-- 댓글 -->
+	<insert id="addComment" parameterType="commentt">
+		INSERT
+		INTO commentt(
+				comment_no, user_id, post_no, comment_content, comment_date, comment_status, like_count)
+		VALUES(seq_comment_comment_no.NEXTVAL, #{userId}, #{postNo}, #{commentContent}, SYSDATE, '1', 0)
+	</insert>
+	
+	<select id="getComment" parameterType="int" resultMap="commentSelectMap">
+		SELECT
+			comment_no, user_id, post_no, comment_content, comment_date, comment_status
+		FROM commentt
+		WHERE comment_no = #{value}
+	</select>
+	
+	<update id="updateComment" parameterType="commentt">
+		UPDATE commentt
+		SET
+			comment_content = #{commentContent}
+		WHERE comment_no = #{commentNo}
+	</update>
+	
+	<update id="deleteComment" parameterType="int">
+		UPDATE commentt
+		SET
+			comment_status = '2'
+		WHERE comment_no = #{commentNo}
+	</update>
+	
+	<!-- 게시물의 댓글(1), 본인의 댓글(2) -->
+	<select id="getCommentList" parameterType="map" resultMap="commentSelectMap">
+		SELECT 
+ 			comment_no, user_id, post_no, comment_content, comment_date, comment_status
+ 		FROM ( SELECT inner_table.*, ROWNUM AS row_seq
+ 			FROM ( SELECT * FROM commentt
+ 						WHERE comment_status = '1'
+ 						<if test="search.searchCondition == '1' ">
+ 							AND post_no = #{postNo}
+ 						</if>
+ 						<if test="search.searchCondition == '2' ">
+ 							AND user_id = #{userId}
+ 						</if>
+ 						ORDER BY comment_no) inner_table
+ 			WHERE ROWNUM &lt;= #{search.endRowNum} )
+ 		WHERE row_seq BETWEEN #{search.startRowNum} AND #{search.endRowNum}
+	</select>
+	
+	<!-- 코멘트 페이징용 -->
+	<select id="getCommentTotalCount" parameterType="search" resultType="int">
+		SELECT COUNT(*)
+	  	FROM(	SELECT *
+						FROM commentt
+						<!-- <if test="searchCondition != null">
+							<where>
+								<if test="searchCondition == 1 and searchKeyword !='' ">
+						 			and prod_no = #{searchKeyword}
+								</if>
+								<if test="searchCondition == 2 and searchKeyword !='' ">
+						 			and prod_name = #{searchKeyword}
+								</if>
+								<if test="searchCondition == 3 and searchKeyword !='' ">
+						 			and price = #{searchKeyword}
+								</if>
+							</where>
+						</if> --> ) countTable
+	</select>
+	
+	<!-- 좋아요 -->
+	<insert id="addPostLike" parameterType="likey">
+		INSERT
+		INTO likey(
+				like_no, ref_comment_no, ref_post_no, user_id, like_what)
+		VALUES(seq_likey_like_no.NEXTVAL, null, #{refPostNo}, #{userId}, '1')
+	</insert>
+	
+	<insert id="addCommentLike" parameterType="likey">
+		INSERT
+		INTO likey(
+				like_no, ref_comment_no, ref_post_no, user_id, like_what)
+		VALUES(seq_likey_like_no.NEXTVAL, #{refCommentNo}, null, #{userId}, '2')
+	</insert>
+	
+	<delete id="deleteLike" parameterType="int">
+		DELETE 
+		FROM likey
+		WHERE like_no = #{likeNo}
+	</delete>
+	
+	<!-- 게시글 좋아요(1), 댓글 좋아요(2) -->
+	<select id="getLikeList" parameterType="map" resultMap="likeSelectMap">
+		SELECT 
+ 			like_no, ref_comment_no, ref_post_no, user_id, like_what
+ 		FROM ( SELECT inner_table.*, ROWNUM AS row_seq
+ 			FROM ( SELECT * FROM likey 
+ 					WHERE 
+ 							user_id = #{userId}
+ 						<if test = "search.searchCondition == 1">
+ 							AND like_what = '1'
+ 						</if>
+ 						<if test = "search.searchCondition == 2">
+ 							AND like_what = '2'
+ 						</if>
+ 						ORDER BY like_no) inner_table
+ 			WHERE ROWNUM &lt;= #{search.endRowNum} )
+ 		WHERE row_seq BETWEEN #{search.startRowNum} AND #{search.endRowNum}
+	</select>
+	
+	<!-- 좋아요 페이징용 -->
+	<select id="getLikeTotalCount" parameterType="search" resultType="int">
+		SELECT COUNT(*)
+	  	FROM(	SELECT *
+						FROM likey
+						<!-- <if test="searchCondition != null">
+							<where>
+								<if test="searchCondition == 1 and searchKeyword !='' ">
+						 			and prod_no = #{searchKeyword}
+								</if>
+								<if test="searchCondition == 2 and searchKeyword !='' ">
+						 			and prod_name = #{searchKeyword}
+								</if>
+								<if test="searchCondition == 3 and searchKeyword !='' ">
+						 			and price = #{searchKeyword}
+								</if>
+							</where>
+						</if> --> ) countTable
+	</select>
+	
+	<!-- 알림 -->
+	<insert id="addNotification" parameterType="notification">
+		INSERT
+		INTO notification(
+				noti_no, user_id, noti_date, noti_origin, noti_code)
+		VALUES(seq_likey_like_no.NEXTVAL, #{refCommentNo}, null, #{userId}, '2')
+	</insert>
+	
+	<!-- 포스트의 댓글수 업데이트 -->
+	<update id="updateCommentStatus" parameterType="map">
+		UPDATE post
+ 		SET comment_count = comment_count + #{change}
+ 		WHERE post_no = #{postNo}
+	</update>
+	
+	<!-- 포스트의 좋아요 수 업데이트 -->
+	<update id="updatePostLikeStatus" parameterType="map">
+		UPDATE post
+ 		SET like_count = like_count + #{change}
+ 		WHERE post_no = #{postNo}
+	</update>
+	
+	<!-- 댓글의 좋아요 수 업데이트 -->
+	<update id="updateCommentLikeStatus" parameterType="map">
+		UPDATE commentt
+ 		SET like_count = like_count + #{change}
+ 		WHERE comment_no = #{commentNo}
+	</update>
+	
+</mapper>
+

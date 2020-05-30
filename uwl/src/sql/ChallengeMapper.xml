@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!DOCTYPE mapper
+		PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+		"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ChallengeMapper">
+
+	<!-- Challenge(도전과제) table  assosiation 필요하면 추가할 것.-->
+	<resultMap id="challengSelectMap" type="challenge">
+		<result property="challNo" 			column="chall_no" 			jdbcType="NUMERIC"/>
+		<result property="challCategory" 			column="chall_category" 			jdbcType="VARCHAR"/>
+		<result property="challTitle" 			column="chall_title" 			jdbcType="VARCHAR"/>
+		<result property="challContent" 			column="chall_content" 			jdbcType="VARCHAR"/>
+		<result property="challDate" 			column="chall_date" 			jdbcType="DATE"/>
+		<result property="challReward" 	column="chall_reward" 		jdbcType="NUMERIC" />
+		<result property="viewStatus" 	column="view_status" 		jdbcType="VARCHAR" />
+	</resultMap>
+	
+	<!-- Challenge -->
+	<!-- SQL : INSERT -->
+	<insert 	id="addChallenge"		parameterType="challenge" >
+	 	INSERT INTO challenge(	chall_no,
+								chall_category,
+								chall_title,
+								chall_content,
+								chall_date,
+								chall_reward,
+								view_status) 
+			VALUES(seq_challenge_chall_no.NEXTVAL,#{challCategory:VARCHAR},#{challTitle},#{challContent:VARCHAR},SYSDATE,#{challReward:NUMERIC},'1')
+	 </insert>
+	 
+	 <!-- SQL : UPDATE(수정) -->
+	<update	id="updateChallenge"	parameterType="challenge" >
+	   	UPDATE challenge 
+	   	<set>
+			chall_category = #{challCategory},
+			chall_title = #{challTitle},
+			chall_content = #{challContent},
+			chall_reward = #{challReward},
+			view_status = #{viewStatus}
+		</set>
+		WHERE chall_no = #{challNo}
+	 </update>
+	 
+	 <!-- SQL : DELETE( 삭제 FLAG(실제삭제 X, DB에는 존재) ) -->
+	<update	id="deleteChallenge"	parameterType="challenge" >
+	   	UPDATE challenge 
+	   	<set>
+			view_status = '3'
+		</set>
+		WHERE chall_no = #{challNo}
+	 </update>
+	 
+	 <!-- SQL : SELECT LIST - Admin 용 오류나면 parameterType 의심 -->
+	 <select  id="getAdminChallengeList"  parameterType="search"	resultMap="challengSelectMap">
+	  	SELECT *
+	  	FROM (	SELECT inner_table.* , ROWNUM AS row_seq
+ 					FROM ( 	SELECT chall_no,
+			 				chall_category,
+			 				chall_title,
+			 				chall_content,
+			 				chall_date,
+			 				chall_reward,
+			 				view_status FROM challenge
+							<if test="searchCondition != null">
+								<where>
+									<if test="searchCondition == 1 and searchKeyword !='' ">
+							 			chall_title LIKE '%'||#{searchKeyword}||'%'
+									</if>
+									<if test="searchCondition == 2 and searchKeyword !='' ">
+							 			chall_content LIKE '%'||#{searchKeyword}||'%'
+									</if>
+								</where>
+							</if>
+			 				ORDER BY chall_date DESC) inner_table
+				WHERE ROWNUM &lt;= #{endRowNum:INTEGER} )
+				WHERE row_seq BETWEEN #{startRowNum:INTEGER} AND #{endRowNum:INTEGER} 
+	 </select>
+	 
+	 <!-- SQL : SELECT ONE -ADMIN -->
+	 <select  id="getChallengeAdmin"  parameterType="int"	resultMap="challengSelectMap">
+	  	SELECT
+			chall_no,
+			chall_category,
+			chall_title,
+			chall_content,
+			chall_date,
+			chall_reward,
+			view_status
+		FROM challenge 
+		WHERE chall_no = #{value}
+	 </select>
+	 
+	 <!-- SQL : SELECT LIST- USER용(3개 랜덤 추출) 파라미터타입 필요없지만 검색을 위해 남겨둠 -->
+	 <select  id="getChallengeList" resultMap="challengSelectMap">
+	 	SELECT * FROM  (SELECT * FROM challenge
+                 		ORDER BY dbms_random.value)
+		WHERE ROWNUM &lt;= 3
+	 </select> 
+	 
+	 <!-- SQL : SELECT ONE - USER용 -->
+	 <select  id="getCompleteChallengeList"  parameterType="map"	resultMap="challengSelectMap">
+		SELECT *
+	  	FROM (	SELECT inner_table.* , ROWNUM AS row_seq
+	  					FROM		(	SELECT 
+											c.chall_no,
+											c.chall_category,
+											c.chall_title,
+											c.chall_content,
+											c.chall_date,
+											c.chall_reward,
+											r.user_id
+										FROM reward r, challenge c  
+										WHERE r.chall_no = c.chall_no AND r.user_id = #{userId} ORDER BY c.chall_date) inner_table
+						WHERE ROWNUM &lt;= #{search.endRowNum:INTEGER} )
+						WHERE row_seq BETWEEN #{search.startRowNum:INTEGER} AND #{search.endRowNum:INTEGER} 	
+	 </select>
+	 
+	 
+	 <!-- SQL : SELECT ROW Count -->	 
+	 <select  id="getTotalCount"  parameterType="search"	 resultType="int">
+	  	SELECT COUNT(*) FROM(	 SELECT chall_no,
+			 				chall_category,
+			 				chall_title,
+			 				chall_content,
+			 				chall_date,
+			 				chall_reward,
+			 				view_status FROM challenge
+			 				<if test="searchCondition != null">
+								<where>
+									<if test="searchCondition == 1 and searchKeyword !='' ">
+							 			chall_title LIKE '%'||#{searchKeyword}||'%'
+									</if>
+									<if test="searchCondition == 2 and searchKeyword !='' ">
+							 			chall_content LIKE '%'||#{searchKeyword}||'%'
+									</if>
+								</where>
+							</if>
+			 				ORDER BY chall_date DESC) countTable
+	  	
+	 </select>
+	 
+	 <!-- SQL : SELECT ROW Count -->	 
+	 <select  id="getTotalCountOne"  parameterType="String"	 resultType="int">
+	  	SELECT COUNT(*) FROM(	 SELECT 
+									c.chall_no,
+									c.chall_category,
+									c.chall_title,
+									c.chall_content,
+									c.chall_date,
+									c.chall_reward,
+									r.user_id
+								FROM reward r, challenge c  
+								WHERE r.chall_no = c.chall_no AND r.user_id = #{userId} ORDER BY c.chall_date) countTable
+	 </select>
+	 
+ 	
+</mapper>
